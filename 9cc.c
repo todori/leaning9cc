@@ -45,6 +45,7 @@ Node *new_node_num(int val){
 // Prototypoe 宣言
 Node *expr();
 Node *mul();
+Node *unary();
 Node *primary();
 
 
@@ -208,19 +209,29 @@ Node *expr(){
 	}
 }
 
-// 生成規則 mul = primary ( "*" primary | "/" primary)*
+// 生成規則 mul = unary ( "*" unary | "/" unary)*
 // 関数内のconsumeでTokenを1つ進める
 Node *mul(){
-	Node *node = primary();
+	Node *node = unary();
 
 	for(;;){
 		if(consume('*'))
-			node = new_node(ND_MUL, node, primary());
+			node = new_node(ND_MUL, node, unary());
 		else if(consume('/'))
-			node = new_node(ND_DIV, node, primary());
+			node = new_node(ND_DIV, node, unary());
 		else
 			return node;
 	}
+}
+
+//生成規則 unary = ("+" | "-")?primary
+//
+Node *unary(){
+	if(consume('+'))
+		return primary();
+	if(consume('-')) // '-'の場合 '0 - num'の減算ノードとして表現する 
+		return new_node(ND_SUB, new_node_num(0), primary());
+	return primary();
 }
 
 // 生成規則 primary = num | "(" expr ")"
