@@ -145,9 +145,9 @@ Node *mul(Token **rest, Token *tok){
 //
 Node *unary(Token **rest, Token *tok){
 	if(equal(tok, "+"))
-		return primary(&tok, tok->next);
+		return primary(rest, tok->next);
 	if(equal(tok, "-")) // '-'の場合 '0 - num'の減算ノードとして表現する 
-		return new_node(ND_SUB, new_node_num(0), primary(&tok, tok->next));
+		return new_node(ND_SUB, new_node_num(0), primary(rest, tok->next));
 	return primary(rest, tok);
 }
 
