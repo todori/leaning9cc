@@ -35,6 +35,7 @@ struct Node{
 typedef enum{
 	TK_RESERVED,	// 記号
 	TK_NUM,				// 整数
+	TK_IDENT,			// 識別子(1文字変数用)
 	TK_EOF,				// 入力の終わりを表すトークン
 }TokenKind;
 
@@ -55,7 +56,10 @@ extern void error(char *fmt, ...);
 extern Token *tokenize(char *user_input);
 
 //Paser token
-extern Node *parse(Token *token);
+//extern Node *parse(Token *token);
+extern Node *parse();
+
+Token *token; // 注目しているトークン
 
 extern void codegen(Node *node);
 

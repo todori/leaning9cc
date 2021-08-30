@@ -24,12 +24,33 @@ Token *skip(Token *tok, char *op){
 	return tok->next;
 }
 
+// Global 変数のtokenを処理する
+bool consume(char *op){
+	if(token->kind != TK_RESERVED ||
+		 strlen(op) != token->len ||
+		 !equal(token, op))
+		return false;
+	token = token->next;
+	return true;
+}
+
+// Global 変数のtokenを処理する
+void expect(char *op){
+	if(token->kind != TK_RESERVED ||
+		 strlen(op) != token->len ||
+		 !equal(token, op))
+		error("'%c'ではありません", op);
+	token=token->next;
+}
+
+// Global 変数のtokenを処理する
 //次のトークンが数値の場合、トークンを1つ読み進めてその数値を返す。
 //それ以外の場合にはエラーを報告する
-int expect_number(Token *token){
+int expect_number(){
 	if(token->kind != TK_NUM)
 		error("数ではありません");
 	int val = token->val;
+	token = token->next;
 	return val;
 }
 
@@ -55,68 +76,65 @@ Node *new_node_num(int val){
 
 
 // 再帰のための関数 Prototype 宣言
-Node *expr(Token **, Token *); // expr = equality
-Node *equality(Token **, Token *); // equality = relational( "==" relational | "!=" relational) *
-Node *relational(Token **, Token *); // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-Node *add(Token **, Token *); // add = mul ("+" mul | "-" mul)*
-Node *mul(Token **, Token *); // mul = unary ("*" unary | "/" unary)*
-Node *unary(Token **, Token *); // unary = ("+" | "-")? primary
-Node *primary(Token ** , Token *); // primary = num | "(" expr ")"
+Node *expr(); // expr = equality
+Node *equality(); // equality = relational( "==" relational | "!=" relational) *
+Node *relational(); // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+Node *add(); // add = mul ("+" mul | "-" mul)*
+Node *mul(); // mul = unary ("*" unary | "/" unary)*
+Node *unary(); // unary = ("+" | "-")? primary
+Node *primary(); // primary = num | "(" expr ")"
 
 
 // 再帰下降構文解析
 //生成規則 expr = equality
-Node *expr(Token **rest, Token *tok){
-	return equality(rest, tok);
+Node *expr(){
+	return equality();
 }
 
 // equality = relational ( "==" relational || "!=" relational)*
-Node *equality(Token **rest, Token *tok){
-	Node *node = relational(&tok, tok);
+Node *equality(){
+	Node *node = relational();
 
 	for(;;){
-		if(equal(tok, "=="))
-			node = new_node(ND_EQ, node, relational(&tok, tok->next));
-		else if(equal(tok, "!="))
-			node = new_node(ND_NE, node, relational(&tok, tok->next));
+		if(consume("=="))
+			node = new_node(ND_EQ, node, relational());
+		else if(consume("!="))
+			node = new_node(ND_NE, node, relational());
 		else{
-			*rest = tok; // 現在のトークン配列の場所をrestへ反映
 			return node;
 		}
 	}
 }
 
 // relational = add ( "<" add | "<=" add | ">" add | ">=" add)*
-Node *relational(Token **rest, Token *tok){
-	Node *node = add(&tok, tok);
+Node *relational(){
+	Node *node = add();
 
 	for(;;){
-		if(equal(tok, "<"))
-			node = new_node(ND_LT, node, add(&tok, tok->next));
-		else if(equal(tok, "<="))
-			node = new_node(ND_LE, node, add(&tok, tok->next));
-		else if(equal(tok, ">"))
-			node = new_node(ND_LT, add(&tok, tok->next), node);
-		else if(equal(tok, ">="))
-			node = new_node(ND_LE, add(&tok, tok->next), node);
+		if(consume("<"))
+			node = new_node(ND_LT, node, add());
+		else if(consume("<="))
+			node = new_node(ND_LE, node, add());
+		else if(consume(">"))
+			node = new_node(ND_LT, add(), node);
+		else if(consume(">="))
+			node = new_node(ND_LE, add(), node);
 		else{
-			*rest = tok;
 			return node;
 		}
 	}
 }
 
 // add = mul ( "+" mul | "-" mul)*
-Node *add(Token **rest, Token *tok){
-	Node *node = mul(&tok, tok);
+Node *add(){
+	Node *node = mul();
 
 	for(;;){
-		if(equal(tok, "+")) 
-			node = new_node(ND_ADD, node, mul(&tok, tok->next));
-		else if(equal(tok, "-")) 
-			node = new_node(ND_SUB, node, mul(&tok, tok->next));
+		if(consume("+")) 
+			node = new_node(ND_ADD, node, mul());
+		else if(consume("-")) 
+			node = new_node(ND_SUB, node, mul());
 		else{
-			*rest = tok;
 			return node;
 		}
 	}
@@ -124,18 +142,17 @@ Node *add(Token **rest, Token *tok){
 
 // 生成規則 mul = unary ( "*" unary | "/" unary)*
 // 関数内のconsumeでTokenを1つ進める
-Node *mul(Token **rest, Token *tok){
-	Node *node = unary(&tok, tok);
+Node *mul(){
+	Node *node = unary();
 
 	for(;;){
-		if(equal(tok, "*")){
-			node = new_node(ND_MUL, node, unary(&tok, tok->next));
+		if(consume("*")){
+			node = new_node(ND_MUL, node, unary());
 		}
-		else if(equal(tok, "/")){
-			node = new_node(ND_DIV, node, unary(&tok, tok->next));
+		else if(consume("/")){
+			node = new_node(ND_DIV, node, unary());
 		}
 		else{
-			*rest = tok;
 			return node;
 		}
 	}
@@ -143,33 +160,32 @@ Node *mul(Token **rest, Token *tok){
 
 //生成規則 unary = ("+" | "-")?primary
 //
-Node *unary(Token **rest, Token *tok){
-	if(equal(tok, "+"))
-		return primary(rest, tok->next);
-	if(equal(tok, "-")) // '-'の場合 '0 - num'の減算ノードとして表現する 
-		return new_node(ND_SUB, new_node_num(0), primary(rest, tok->next));
-	return primary(rest, tok);
+Node *unary(){
+	if(consume("+"))
+		return primary();
+	if(consume("-")) // '-'の場合 '0 - num'の減算ノードとして表現する 
+		return new_node(ND_SUB, new_node_num(0), primary());
+	return primary();
 }
 
 // 生成規則 primary = num | "(" expr ")"
 // 関数内のconsumeとexpect_numberでTokenを1つ進める
-Node *primary(Token **rest, Token *tok){
+Node *primary(){
 	// 次のトークンが"("なら"(" expr ")"のはず
-	if(equal(tok, "(")){
-		Node *node = expr(&tok, tok->next);
-		*rest = skip(tok, ")"); //Token列を次へ進める
+	if(consume("(")){
+		Node *node = expr();
+		expect(")"); //Token列を次へ進める
 		return node;
 	}
 
 	// そうでなければ数値のはず
-	Node *node = new_node_num(expect_number(tok));
-	*rest = tok->next; // Token列を次へ進める
+	Node *node = new_node_num(expect_number());
 
 	return node;
 }
 
-Node *parse(Token *token){
-	Node *node = expr(&token, token);
+Node *parse(){
+	Node *node = expr();
 	return node;
 }
 
