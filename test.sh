@@ -17,31 +17,11 @@ assert(){
 	fi
 }
 
-
-assert 1 '-1+2'
-assert 2 '1-2+3'
-assert 17 '3*4+5'
-assert 4 '-2*(4-6)'
-
-assert 1 '0==0'
-assert 0 '1==0'
-assert 1 '1!=2'
-assert 0 '3!=3'
-
-assert 1 '3<4'
-assert 1 '-1 < 0'
-assert 0 ' -2 < -3'
-
-assert 1 '3<=3'
-assert 0 '4<=3'
-
-assert 1 '3>-1'
-assert 0 '9>11'
-
-assert 1 '8>=6'
-assert 1 '8>=8'
-assert 0 '6>=8'
-
+assert 2 'a=2;'
+assert 4 '4;'
+assert 3 'a=1;
+b=2;
+c=a+b;'
 
 echo OK
 

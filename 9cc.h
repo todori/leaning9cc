@@ -17,6 +17,8 @@ typedef enum{
 	ND_NE,	// !=
 	ND_LT,	// <
 	ND_LE,	// <=
+	ND_ASSIGN, // =
+	ND_LVAR, // ローカル変数
 	ND_NUM, // 整数
 }NodeKind;
 
@@ -28,6 +30,7 @@ struct Node{
 	Node *lhs;	// 左辺(Left Hand Side)
 	Node *rhs;	// 右辺(Right Hand Side)
 	int val;		// kindがND_NUMの場合のみ使う
+	int offset;	// kindがND_LVARの場合のみ使う
 };
 
 
@@ -56,12 +59,13 @@ extern void error(char *fmt, ...);
 extern Token *tokenize(char *user_input);
 
 //Paser token
-//extern Node *parse(Token *token);
-extern Node *parse();
+extern void parse();
 
 Token *token; // 注目しているトークン
 
-extern void codegen(Node *node);
+Node *code[100]; //";"を終端とする複数行コードのノードリンク。100行まで対応する 
+
+extern void codegen();
 
 
 

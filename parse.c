@@ -34,6 +34,19 @@ bool consume(char *op){
 	return true;
 }
 
+Token *consume_ident(){
+	Token *return_token = token;
+	token = token->next;
+	return return_token;
+}
+
+bool is_ident(){
+	if(token->kind != TK_IDENT){
+		return false;
+	}
+	return true;
+}
+
 // Global 変数のtokenを処理する
 void expect(char *op){
 	if(token->kind != TK_RESERVED ||
@@ -74,21 +87,55 @@ Node *new_node_num(int val){
 }
 
 
+bool at_eof(){
+	return token->kind == TK_EOF;
+}
 
 // 再帰のための関数 Prototype 宣言
-Node *expr(); // expr = equality
+void program(); // program = stmt*
+Node *stmt(); // stmt = expr ";"
+Node *expr(); // expr = assign
+Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
 Node *relational(); // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 Node *add(); // add = mul ("+" mul | "-" mul)*
 Node *mul(); // mul = unary ("*" unary | "/" unary)*
 Node *unary(); // unary = ("+" | "-")? primary
-Node *primary(); // primary = num | "(" expr ")"
+Node *primary(); // primary = num | ident | "(" expr ")"
+
+
 
 
 // 再帰下降構文解析
+
+void program(){
+	int i = 0;
+	while(!at_eof()){
+		code[i++] = stmt();
+	}
+	code[i] = NULL; // 末尾のためのNULL
+}
+
+Node *stmt(){
+	Node *node = expr();
+	expect(";");
+	return node;
+}
+
+
 //生成規則 expr = equality
 Node *expr(){
-	return equality();
+	return assign();
+}
+
+Node *assign(){
+	Node *node = equality();
+
+	if(consume("=")){
+		node = new_node(ND_ASSIGN, node, assign());
+	}
+
+	return node;
 }
 
 // equality = relational ( "==" relational || "!=" relational)*
@@ -168,7 +215,7 @@ Node *unary(){
 	return primary();
 }
 
-// 生成規則 primary = num | "(" expr ")"
+// 生成規則 primary = num | ident | "(" expr ")"
 // 関数内のconsumeとexpect_numberでTokenを1つ進める
 Node *primary(){
 	// 次のトークンが"("なら"(" expr ")"のはず
@@ -178,14 +225,27 @@ Node *primary(){
 		return node;
 	}
 
+	if(is_ident())
+	{
+		Token *tok = consume_ident();
+
+		Node *node = calloc(1,sizeof(Node));
+		node->kind = ND_LVAR;
+		node->offset = (tok->str[0] - 'a' + 1) * 8; // 変数aはRBP-8 RBP-16 --- なので
+		// (一文字変数のACSIIコード - 'a' +1) * 8となる。
+		// 一文字変数が'a'の場合, ('a'- 'a' + 1) * 8 = 8  
+
+		return node;
+	}
+
 	// そうでなければ数値のはず
 	Node *node = new_node_num(expect_number());
 
 	return node;
 }
 
-Node *parse(){
-	Node *node = expr();
-	return node;
+void parse(){
+	program();
 }
+
 

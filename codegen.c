@@ -2,6 +2,19 @@
 
 
 // 抽象構文木を下りながらコードを生成する
+// ローカス変数の場合
+// Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
+// プロローグでRBPの値(メモリアドレス)を設定しているので、
+// そのアドレスからのオフセット分を計算した値をRAXへ返す
+void gen_lvar(Node *node){
+	if(node->kind != ND_LVAR)
+		error("代入の左辺値が変数ではありません。");
+
+	printf("	mov rax, rbp\n"); // RBPの値(レジスタアドレス)をRAXレジスタへ代入
+	printf("	sub rax, %d\n", node->offset); // RAXの値からオフセット値を引き、その結果をRAXへ
+	printf("	push rax\n"); // RAXをスタックトップへプッシュ
+}
+
 // ノードの種類が数値出ない場合、左辺と右辺をそれぞで木を下りコードを生成する
 void gen(Node *node){
 	
@@ -9,9 +22,26 @@ void gen(Node *node){
 		printf("	push %d\n", node->val);
 		return;
 	}
+	else if(node->kind == ND_LVAR){ //木終端が変数である場合、変数の値をスタックへ積む
+		gen_lvar(node); // 変数のメモリアドレスを計算して、スタックトップへ積む(RSPが示す番地の値)
+		printf("	pop rax\n"); // gen_lvarで計算したRSPの内容(メモリアドレス)をRAXへ代入
+		printf("	mov rax, [rax]\n"); // RAXが示すメモリアドレスの値(変数の値)をRAXへ代入
+		printf("	push rax\n"); // RAXの値をスタックトップへ積む
+		return;
+	}
+	else if(node->kind == ND_ASSIGN){ // 宣言である場合。a=3などの処理を行う。
+		gen_lvar(node->lhs); // 左側ノードは変数であるはずなので、そのメモリアドレスを計算してスタックトップへ積む
+		gen(node->rhs); // 右側ノードのパース。数字、アドレスのプッシュ / 宣言の処理
 
-	gen(node->lhs); // 左のノードをパース。数字をプッシュしたら戻る。
-	gen(node->rhs); // 右のノードをパース。数字をプッシュしたら戻る。
+		printf("	pop rdi\n"); // 右側ノードは数値であるので、RSIは数字
+		printf("	pop rax\n"); // 左側ノードは変数であるので、RAXはメモリアドレスになる
+		printf("	mov	[rax], rdi\n"); // 変数アドレスへRDI値を代入
+		printf("	push rdi\n"); // RDI値をスタックトップへ積む
+		return;
+	}
+
+	gen(node->lhs); // 左のノードをパース。数字のプッシュ。変数アドレスのプッシュ、宣言の処理
+	gen(node->rhs); // 右のノードをパース。
 
 	printf("	pop rdi\n"); //後にスタックした値を先に取り出す。右側のノードの値
 	printf("	pop rax\n"); //先のスタックした値を後に取り出す。左側のノードの値
@@ -55,21 +85,39 @@ void gen(Node *node){
 	printf("	push rax\n"); // 演算結果が格納されているraxレジスタをスタックへプッシュする
 }
 
-void codegen(Node *node){
+void codegen(){
 	
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
 	printf(".global main\n");
 	printf("main:\n");
 
-	// 抽象構造木のノード列を下りながらコードを生成
-	gen(node);
+	// プロローグ
+	// 変数 26個分 ('a'- 'z')の領域を確保する
+	printf("	push rbp\n"); // RBPレジスタ（ベースレジスタ)の値(ベースポインタ値)を
+	// RSPレジスタが指すスタックの先頭へプッシュする（メモリアクセス)
+	printf("	mov rbp, rsp\n"); // RSPレジスタ値をRBPレジスタへ代入(メモリアドレス RBP = RSP)
+	printf("	sub rsp, 208\n"); // 208 = (28個 * 8 byte) 分 RSPから差し引く(メモリアドレス)
+	// 呼び出し時点のRBP	RBP
+	// a
+	// b
+	// :
+	// Z									RSP
+
+	for(int i = 0; code[i]; i++){ // Codeの末尾はNULL
+		gen(code[i]);
+		
+		// 式の評価結果としてスタックに１つの値が残っているはずなので、
+		// スタックが溢れないようにポップしておく
+		printf("	pop rax\n");
+	}
 
 	// スタックトップに式全体の値が残っているはずなので
 	// それをRAXにロードして関数からの返り値とする
-	printf("	pop rax\n");
-	printf("	ret\n");
-
+	// エピローグ
+	printf("	mov rsp, rbp\n");
+	printf("	pop rbp\n");
+	printf("	ret\n");	
 }
 
 
