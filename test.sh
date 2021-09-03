@@ -23,5 +23,10 @@ assert 3 'a=1;
 b=2;
 c=a+b;'
 
+assert 3 '2+1;'
+assert 2 '1*(3-1);'
+assert 1 '1==1;'
+assert 0 '2>3;'
+
 echo OK
 

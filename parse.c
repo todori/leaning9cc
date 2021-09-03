@@ -25,6 +25,7 @@ Token *skip(Token *tok, char *op){
 }
 
 // Global 変数のtokenを処理する
+// tokenがopであるなら、tokenを1つ前に進める
 bool consume(char *op){
 	if(token->kind != TK_RESERVED ||
 		 strlen(op) != token->len ||
@@ -34,12 +35,15 @@ bool consume(char *op){
 	return true;
 }
 
+// Tokenが変数であることを仮定して、
+// 現在のTokenを返し、Tokenを1つ前に進める
 Token *consume_ident(){
 	Token *return_token = token;
 	token = token->next;
 	return return_token;
 }
 
+// 現在のTokenが変数であるかを判断する
 bool is_ident(){
 	if(token->kind != TK_IDENT){
 		return false;
@@ -108,6 +112,7 @@ Node *primary(); // primary = num | ident | "(" expr ")"
 
 // 再帰下降構文解析
 
+// program = stmt*
 void program(){
 	int i = 0;
 	while(!at_eof()){
@@ -116,6 +121,7 @@ void program(){
 	code[i] = NULL; // 末尾のためのNULL
 }
 
+// stmt = expr ";"
 Node *stmt(){
 	Node *node = expr();
 	expect(";");
@@ -123,11 +129,13 @@ Node *stmt(){
 }
 
 
-//生成規則 expr = equality
+//生成規則 expr = assign
 Node *expr(){
 	return assign();
 }
 
+// assign = equality ("=" assign)?
+// 関数内のcomsumeでTokenを1つ進める
 Node *assign(){
 	Node *node = equality();
 
@@ -139,6 +147,7 @@ Node *assign(){
 }
 
 // equality = relational ( "==" relational || "!=" relational)*
+// 関数内のconsumeでTokenを1つ進める
 Node *equality(){
 	Node *node = relational();
 
@@ -154,6 +163,7 @@ Node *equality(){
 }
 
 // relational = add ( "<" add | "<=" add | ">" add | ">=" add)*
+// 関数内のcomsumeでTokenを1つ進める
 Node *relational(){
 	Node *node = add();
 
@@ -173,6 +183,7 @@ Node *relational(){
 }
 
 // add = mul ( "+" mul | "-" mul)*
+// 関数内のcomsumeでTokenを１つ進める
 Node *add(){
 	Node *node = mul();
 
@@ -206,7 +217,7 @@ Node *mul(){
 }
 
 //生成規則 unary = ("+" | "-")?primary
-//
+//関数内のcomsumeでTokenを１つ進める
 Node *unary(){
 	if(consume("+"))
 		return primary();
@@ -216,7 +227,7 @@ Node *unary(){
 }
 
 // 生成規則 primary = num | ident | "(" expr ")"
-// 関数内のconsumeとexpect_numberでTokenを1つ進める
+// 関数内のconsume,expectとexpect_numberでTokenを1つ進める
 Node *primary(){
 	// 次のトークンが"("なら"(" expr ")"のはず
 	if(consume("(")){
@@ -225,12 +236,12 @@ Node *primary(){
 		return node;
 	}
 
-	if(is_ident())
+	if(is_ident()) // 変数の場合
 	{
-		Token *tok = consume_ident();
+		Token *tok = consume_ident(); // 現在のTokenを戻し、consume_ident内でTokenを1つ進める
 
 		Node *node = calloc(1,sizeof(Node));
-		node->kind = ND_LVAR;
+		node->kind = ND_LVAR; // 変数ノードを作成する
 		node->offset = (tok->str[0] - 'a' + 1) * 8; // 変数aはRBP-8 RBP-16 --- なので
 		// (一文字変数のACSIIコード - 'a' +1) * 8となる。
 		// 一文字変数が'a'の場合, ('a'- 'a' + 1) * 8 = 8  
@@ -239,11 +250,13 @@ Node *primary(){
 	}
 
 	// そうでなければ数値のはず
-	Node *node = new_node_num(expect_number());
+	Node *node = new_node_num(expect_number()); // expect_number内でTokenを1つ進める
 
 	return node;
 }
 
+
+// mainから呼ばれる関数
 void parse(){
 	program();
 }

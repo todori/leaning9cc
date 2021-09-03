@@ -1,11 +1,11 @@
 #include "9cc.h"
 
 
-// 抽象構文木を下りながらコードを生成する
 // ローカス変数の場合
 // Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
 // プロローグでRBPの値(メモリアドレス)を設定しているので、
-// そのアドレスからのオフセット分を計算した値をRAXへ返す
+// そのアドレスからのオフセット分を計算した値(メモリアドレス)をRAXへ返し、
+// それをスタックへプッシュする
 void gen_lvar(Node *node){
 	if(node->kind != ND_LVAR)
 		error("代入の左辺値が変数ではありません。");
@@ -15,10 +15,11 @@ void gen_lvar(Node *node){
 	printf("	push rax\n"); // RAXをスタックトップへプッシュ
 }
 
-// ノードの種類が数値出ない場合、左辺と右辺をそれぞで木を下りコードを生成する
+
+// 抽象構文木を下りながらコードを生成する
 void gen(Node *node){
 	
-	if(node->kind == ND_NUM){ //木終端の数字である場合、それをスタックはプッシュ
+	if(node->kind == ND_NUM){ //木終端の数字である場合、それをスタックへプッシュ
 		printf("	push %d\n", node->val);
 		return;
 	}
@@ -33,8 +34,8 @@ void gen(Node *node){
 		gen_lvar(node->lhs); // 左側ノードは変数であるはずなので、そのメモリアドレスを計算してスタックトップへ積む
 		gen(node->rhs); // 右側ノードのパース。数字、アドレスのプッシュ / 宣言の処理
 
-		printf("	pop rdi\n"); // 右側ノードは数値であるので、RSIは数字
-		printf("	pop rax\n"); // 左側ノードは変数であるので、RAXはメモリアドレスになる
+		printf("	pop rdi\n"); // 宣言の場合、右側ノードは数値であるので、RSIは数字
+		printf("	pop rax\n"); // 宣言の場合、左側ノードは変数であるので、RAXはメモリアドレスになる
 		printf("	mov	[rax], rdi\n"); // 変数アドレスへRDI値を代入
 		printf("	push rdi\n"); // RDI値をスタックトップへ積む
 		return;
