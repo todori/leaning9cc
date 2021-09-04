@@ -106,7 +106,11 @@ bool at_eof(){
 
 // 再帰のための関数 Prototype 宣言
 void program(); // program = stmt*
-Node *stmt(); // stmt = expr ";" | "return" expr ";"
+Node *stmt(); 
+// stmt = 
+// expr ";" |
+// "return" expr ";"|
+// "if" "(" expr ")" stmt ( "else" stmt)?
 Node *expr(); // expr = assign
 Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
@@ -130,7 +134,10 @@ void program(){
 	code[i] = NULL; // 末尾のためのNULL
 }
 
-// stmt = expr ";" | "return" expr ";"
+// stmt = 
+// expr ";" |
+// "return" expr ";" |
+// "if" "(" expr ")" stmt ( "else" stmt)?
 Node *stmt(){
 	Node *node;
 
@@ -146,7 +153,16 @@ Node *stmt(){
 		node->kind = ND_IF;
 		node->lhs = expr();
 		expect(")");
-		node->rhs = stmt();
+		Node *tmp_stmt = stmt();
+		if(consume("else")){
+			node->kind = ND_IFEL;
+			Node *el_node = new_node(ND_ELSE, tmp_stmt, stmt());
+			node->rhs = el_node;
+		}
+		else{
+			node->rhs = tmp_stmt;
+		}
+
 	}
 	else{
 		node = expr();

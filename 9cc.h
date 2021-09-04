@@ -22,6 +22,8 @@ typedef enum{
 	ND_NUM, // 整数
 	ND_RETURN, // return
 	ND_IF,		// if
+	ND_IFEL,	// if-else
+	ND_ELSE,	// else
 }NodeKind;
 
 typedef struct Node Node;
@@ -39,7 +41,7 @@ struct Node{
 // トークンの種類
 typedef enum{
 	TK_RETURN,		// return
-	TK_CONTROL,		// 制御構文 if
+	TK_CONTROL,		// 制御構文 if-else
 	TK_RESERVED,	// 記号
 	TK_NUM,				// 整数
 	TK_IDENT,			// 識別子(1文字変数用)
