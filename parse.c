@@ -71,6 +71,15 @@ int expect_number(){
 	return val;
 }
 
+// 変数名を検索する。見つからなかった場合NULLを返す。
+// 見つかった場合、そのLVarを返す
+LVar *find_lvar(Token *tok){
+	for(LVar *var = locals; var ;var = var->next){
+		if(var->len == tok->len && !memcmp(tok->str, var->name, var->len))
+			return var;
+	}
+	return NULL;
+}
 
 //新しいノードを作成し、そのノードを返す
 //引数は新しいノードの種類、左辺、右辺
@@ -239,12 +248,24 @@ Node *primary(){
 	if(is_ident()) // 変数の場合
 	{
 		Token *tok = consume_ident(); // 現在のTokenを戻し、consume_ident内でTokenを1つ進める
-
 		Node *node = calloc(1,sizeof(Node));
 		node->kind = ND_LVAR; // 変数ノードを作成する
-		node->offset = (tok->str[0] - 'a' + 1) * 8; // 変数aはRBP-8 RBP-16 --- なので
-		// (一文字変数のACSIIコード - 'a' +1) * 8となる。
-		// 一文字変数が'a'の場合, ('a'- 'a' + 1) * 8 = 8  
+		
+		LVar *lvar = find_lvar(tok);
+		if(lvar){ // 変数が見つかった場合
+			node->offset = lvar->offset;
+		}
+		else{ // 変数が見つからなかった場合
+			lvar = calloc(1, sizeof(LVar)); // 新しいローカル変数型を作成
+			lvar->next = locals; // 新しいローカル変数の次へこれまで作成しているローカル変数連結を設定
+			lvar->name = tok->str; // 新しいローカル変数の名前を現在のTokenから設定
+			lvar->len = tok->len; // 新しいローカル変数の長さを現在のTokenから設定
+			lvar->offset = locals->offset + 8; // 新しいローカル変数のoffsetをこれまでの変数offset+8に設定
+			locals = lvar; // localsに作成したlvarを設定
+			//上記の処理でlocalsの連結を先の伸ばしていく、スタックへ積むような処理になる
+			
+			node->offset = lvar->offset; // ノードのoffsetを設定
+		}
 
 		return node;
 	}
@@ -258,6 +279,8 @@ Node *primary(){
 
 // mainから呼ばれる関数
 void parse(){
+	// ローカル変数連結の最初を0で初期化する
+	locals = calloc(1, sizeof(LVar));
 	program();
 }
 

@@ -53,6 +53,21 @@ struct Token{
 	int len;				// トークンの長さ
 };
 
+
+
+typedef struct LVar LVar;
+
+// ローカル変数の型
+struct LVar{
+	LVar *next; // 次の変数かNULL;
+	char *name; // 変数の名前
+	int len;		// 名前の長さ
+	int offset;	// RBPからのオフセット
+};
+
+// ローカル変数
+LVar *locals;
+
 extern void error(char *fmt, ...);
 
 //Tokenize
@@ -61,9 +76,16 @@ extern Token *tokenize(char *user_input);
 //Paser token
 extern void parse();
 
-Token *token; // 注目しているトークン
+// 注目しているトークン
+// tokenize内でトークン連結を作成
+Token *token;
 
-Node *code[100]; //";"を終端とする複数行コードのノードリンク。100行まで対応する 
+// ローカル変数。連結リストとして表す
+// parse内で初期化と連結リストを作成する
+LVar *locals;
+
+//";"を終端とする複数行コードのノードリンク。100行まで対応する 
+Node *code[100];  
 
 extern void codegen();
 

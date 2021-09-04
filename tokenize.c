@@ -54,14 +54,10 @@ Token *tokenize(char *user_input){
 		// 2文字記号の判断を1文字記号より先に行う
 		if( startSwitch(p, "==") || startSwitch(p, "!=") ||
 				startSwitch(p, ">=") || startSwitch(p, "<=")) {
+	//		char *str;
+	//		memcpy(str, p, 2);
 			cur = new_token(TK_RESERVED, cur, p, 2);
 			p+=2;
-			continue;
-		}
-			
-		if('a' <= *p && *p <='z'){
-			cur = new_token(TK_IDENT, cur, p++, 1);
-			cur->len = 1;
 			continue;
 		}
 
@@ -75,7 +71,10 @@ Token *tokenize(char *user_input){
 			// 新しくTK_RESERVED型で文字列pのTokenを作成し、
 			// curの次のToken(cur.next)へそのTokenを代入
 			// そして、戻り値としてその作成したTokenのポインタがcurに代入される
-			cur = new_token(TK_RESERVED, cur, p++, 1); 
+//			char *str;
+//			memcpy(str, p, 1);
+			cur = new_token(TK_RESERVED, cur, p, 1);
+			p++;	
 			// 次の文字へ
 			continue;
 		}
@@ -91,6 +90,26 @@ Token *tokenize(char *user_input){
 			cur->val = strtol(p , &p, 10);
 			continue;
 		}
+
+		//複数文字からなる識別子 (変数)をTokenizeする
+		//変数名は英字のみにする
+		char *c = p;
+		int name_len = 0;
+		while('a' <= *c && *c <= 'z' || 'A' <= *c && *c <= 'Z'){
+			c++;
+			name_len++;
+		}
+		if(name_len > 0){
+			cur = new_token(TK_IDENT, cur, p,name_len);
+			p += name_len;
+			continue;
+		}
+		// 1文字変数のTokenize
+	//	if('a' <= *p && *p <='z'){
+	//		cur = new_token(TK_IDENT, cur, p++, 1);
+	//		cur->len = 1;
+	//		continue;
+//		}
 
 		error_at(p,user_input, "トークナイズできません。");
 

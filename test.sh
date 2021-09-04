@@ -17,11 +17,8 @@ assert(){
 	fi
 }
 
-assert 2 'a=2;'
-assert 4 '4;'
-assert 3 'a=1;
-b=2;
-c=a+b;'
+assert 2 'abc=2;'
+assert 4 'foo = 3; bar = -1; ret = foo - bar;'
 
 assert 3 '2+1;'
 assert 2 '1*(3-1);'
