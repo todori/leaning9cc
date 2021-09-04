@@ -27,7 +27,7 @@ Token *skip(Token *tok, char *op){
 // Global 変数のtokenを処理する
 // tokenがopであるなら、tokenを1つ前に進める
 bool consume(char *op){
-	if(token->kind != TK_RESERVED ||
+	if(!(token->kind == TK_RESERVED || token->kind == TK_RETURN )||
 		 strlen(op) != token->len ||
 		 !equal(token, op))
 		return false;
@@ -106,7 +106,7 @@ bool at_eof(){
 
 // 再帰のための関数 Prototype 宣言
 void program(); // program = stmt*
-Node *stmt(); // stmt = expr ";"
+Node *stmt(); // stmt = expr ";" | "return" expr ";"
 Node *expr(); // expr = assign
 Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
@@ -130,9 +130,19 @@ void program(){
 	code[i] = NULL; // 末尾のためのNULL
 }
 
-// stmt = expr ";"
+// stmt = expr ";" | "return" expr ";"
 Node *stmt(){
-	Node *node = expr();
+	Node *node;
+
+	if(consume("return")){
+		node = calloc(1, sizeof(Node));
+		node->kind = ND_RETURN;
+		node->rhs = expr(); // 右側Nodeでexpr
+	}
+	else{
+		node = expr();
+	}
+
 	expect(";");
 	return node;
 }

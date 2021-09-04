@@ -35,6 +35,15 @@ bool startSwitch(char *p, char *q){
 	return memcmp(p , q, strlen(q)) == 0;
 }
 
+// c が英数字または'_'の場合1、それ以外 0
+// トークンを構成する文字
+int is_alnum(char c){
+	return (('a' <= c && c <= 'z') ||
+					('A' <= c && c <= 'Z') ||
+					('0' <= c && c <= '9') ||
+					(c == '_'));
+}
+
 // 入力文字列をトークナイズしてそれを返す
 // この宣言でTokenのポインタを返す
 Token *tokenize(char *user_input){
@@ -51,6 +60,14 @@ Token *tokenize(char *user_input){
 			continue;
 		}
 
+		// return 文の処理
+		// returnの6文字とその後の1文字を確認する
+		// 後の1文字が
+		if(startSwitch(p, "return") && !is_alnum(p[6]) ){
+			cur = new_token(TK_RETURN, cur, p, 6);
+			p+= 6;
+			continue;
+		}
 		// 2文字記号の判断を1文字記号より先に行う
 		if( startSwitch(p, "==") || startSwitch(p, "!=") ||
 				startSwitch(p, ">=") || startSwitch(p, "<=")) {

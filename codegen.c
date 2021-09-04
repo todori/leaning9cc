@@ -19,7 +19,15 @@ void gen_lvar(Node *node){
 // 抽象構文木を下りながらコードを生成する
 void gen(Node *node){
 	
-	if(node->kind == ND_NUM){ //木終端の数字である場合、それをスタックへプッシュ
+	if(node->kind == ND_RETURN){
+		gen(node->rhs); // exprが試行された結果がRaxへpushされる
+		printf("	pop rax\n");
+		printf("	mov rsp, rbp\n");
+		printf("	pop rbp\n");
+		printf("	ret\n");
+		return;
+	}
+	else if(node->kind == ND_NUM){ //木終端の数字である場合、それをスタックへプッシュ
 		printf("	push %d\n", node->val);
 		return;
 	}
@@ -36,7 +44,7 @@ void gen(Node *node){
 
 		printf("	pop rdi\n"); // 宣言の場合、右側ノードは数値であるので、RSIは数字
 		printf("	pop rax\n"); // 宣言の場合、左側ノードは変数であるので、RAXはメモリアドレスになる
-		printf("	mov	[rax], rdi\n"); // 変数アドレスへRDI値を代入
+		printf("	mov [rax], rdi\n"); // 変数アドレスへRDI値を代入
 		printf("	push rdi\n"); // RDI値をスタックトップへ積む
 		return;
 	}
@@ -98,12 +106,12 @@ void codegen(){
 	printf("	push rbp\n"); // RBPレジスタ（ベースレジスタ)の値(ベースポインタ値)を
 	// RSPレジスタが指すスタックの先頭へプッシュする（メモリアクセス)
 	printf("	mov rbp, rsp\n"); // RSPレジスタ値をRBPレジスタへ代入(メモリアドレス RBP = RSP)
-	printf("	sub rsp, 208\n"); // 208 = (28個 * 8 byte) 分 RSPから差し引く(メモリアドレス)
+	printf("	sub rsp, %d\n", locals->offset); // ローカル変数のオフセット分スタックを確保する 
 	// 呼び出し時点のRBP	RBP
-	// a
-	// b
-	// :
-	// Z									RSP
+	// 
+	// 
+	// locals->next>offset
+	// locals									RSP
 
 	for(int i = 0; code[i]; i++){ // Codeの末尾はNULL
 		gen(code[i]);
