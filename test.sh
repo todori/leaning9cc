@@ -17,6 +17,11 @@ assert(){
 	fi
 }
 
+assert 3 'if(3>1) return 3;'
+assert 1 'egg=1; orange=4; if(egg < orange) return egg;'
+assert 4 'egg=1; orange=4; if(egg > orange) return egg;'
+assert 7 'a=1; b=2; if(a>b) a=b; c=4; return 7;'
+assert 4 'a=1; b=2; if(a>b) a=b; c=4;'
 assert 2 'abc=2;'
 assert 4 'foo = 3; bar = -1; ret = foo - bar;'
 

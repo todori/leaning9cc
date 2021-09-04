@@ -14,7 +14,7 @@ void error(char *fmt, ...){
 
 // tokがopを同等なのか判断する
 bool equal(Token *tok, char *op){
-	return memcmp(tok->str, op, tok->len) == 0 && op[tok->len] =='\0';
+	return memcmp(tok->str, op, tok->len) == 0 ;
 }
 
 // tokがopと同じである場合、トークン列を次へ進める
@@ -27,7 +27,7 @@ Token *skip(Token *tok, char *op){
 // Global 変数のtokenを処理する
 // tokenがopであるなら、tokenを1つ前に進める
 bool consume(char *op){
-	if(!(token->kind == TK_RESERVED || token->kind == TK_RETURN )||
+	if(!(token->kind == TK_RESERVED || token->kind == TK_RETURN || token->kind == TK_CONTROL)||
 		 strlen(op) != token->len ||
 		 !equal(token, op))
 		return false;
@@ -138,12 +138,21 @@ Node *stmt(){
 		node = calloc(1, sizeof(Node));
 		node->kind = ND_RETURN;
 		node->rhs = expr(); // 右側Nodeでexpr
+		expect(";");
+	}
+	else if(consume("if")){
+		expect("(");
+		node = calloc(1, sizeof(Node));
+		node->kind = ND_IF;
+		node->lhs = expr();
+		expect(")");
+		node->rhs = stmt();
 	}
 	else{
 		node = expr();
+		expect(";");
 	}
 
-	expect(";");
 	return node;
 }
 

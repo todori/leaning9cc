@@ -1,6 +1,8 @@
 #include "9cc.h"
 
 
+int if_LendNum; // condegenで初期化
+
 // ローカス変数の場合
 // Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
 // プロローグでRBPの値(メモリアドレス)を設定しているので、
@@ -47,6 +49,18 @@ void gen(Node *node){
 		printf("	mov [rax], rdi\n"); // 変数アドレスへRDI値を代入
 		printf("	push rdi\n"); // RDI値をスタックトップへ積む
 		return;
+	}
+	else if(node->kind == ND_IF){ // if ノードである場合
+		gen(node->lhs); // 左側ノードのパース 論理演算の結果がRAXへpushされる
+
+		printf("	pop rax\n"); 
+		printf("	cmp rax, 0\n"); // 結果が0(false)であることを比較
+		printf("	je	.Lend%04d\n", if_LendNum);
+
+		gen(node->rhs); // 右側ノードのパース
+		printf(".Lend%04d:\n", if_LendNum++);
+		return;
+
 	}
 
 	gen(node->lhs); // 左のノードをパース。数字のプッシュ。変数アドレスのプッシュ、宣言の処理
@@ -96,6 +110,9 @@ void gen(Node *node){
 
 void codegen(){
 	
+	//if_LendNumの初期化
+	if_LendNum = 1;
+
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
 	printf(".global main\n");
