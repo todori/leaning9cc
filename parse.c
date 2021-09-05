@@ -1,7 +1,5 @@
 #include "9cc.h"
 
-
-
 void error(char *fmt, ...){
 	
 	va_list ap;
@@ -33,6 +31,15 @@ bool consume(char *op){
 		return false;
 	token = token->next;
 	return true;
+}
+
+// 次のTokenを調べる
+bool nextTokenIs(char *op){
+	if(equal(token->next, op)){
+		return true;
+	}
+	return false;
+
 }
 
 // Tokenが変数であることを仮定して、
@@ -71,6 +78,8 @@ int expect_number(){
 	return val;
 }
 
+
+
 // 変数名を検索する。見つからなかった場合NULLを返す。
 // 見つかった場合、そのLVarを返す
 LVar *find_lvar(Token *tok){
@@ -99,6 +108,12 @@ Node *new_node_num(int val){
 	return node;
 }
 
+// NULL ノード
+Node *new_null_node(){
+	Node *node = calloc(1, sizeof(Node));
+	node->kind = ND_NULL;
+	return node;
+}
 
 bool at_eof(){
 	return token->kind == TK_EOF;
@@ -107,11 +122,11 @@ bool at_eof(){
 // 再帰のための関数 Prototype 宣言
 void program(); // program = stmt*
 Node *stmt(); 
-// stmt = 
-// expr ";" |
-// "return" expr ";"|
-// "if" "(" expr ")" stmt ( "else" stmt)?|
-// "while" "(" expr ")" stmt
+// stmt = expr ";"
+// | "return" expr ";"
+// | "if" "(" expr ")" stmt ( "else" stmt)?
+// | "while" "(" expr ")" stmt 
+// | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 Node *expr(); // expr = assign
 Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
@@ -125,7 +140,7 @@ Node *primary(); // primary = num | ident | "(" expr ")"
 
 
 // 再帰下降構文解析
-
+ 
 // program = stmt*
 void program(){
 	int i = 0;
@@ -135,11 +150,11 @@ void program(){
 	code[i] = NULL; // 末尾のためのNULL
 }
 
-// stmt = 
-// expr ";" |
-// "return" expr ";" |
-// "if" "(" expr ")" stmt ( "else" stmt)? |
-// "while" "(" expr ")"
+// stmt = expr ";"
+// | "return" expr ";"
+// | "if" "(" expr ")" stmt ( "else" stmt)?
+// | "while" "(" expr ")" stmt 
+// | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 Node *stmt(){
 	Node *node;
 
@@ -172,6 +187,43 @@ Node *stmt(){
 		node->lhs = expr(); // 左側: whileの条件式
 		expect(")");
 		node->rhs = stmt(); // 右側 : while構文内で実行するstmt
+	}
+	else if(consume("for")){ // "for" "(" expr? ";" expr? ";" expr ")" stmt
+		expect("(");
+		node = calloc(1,sizeof(Node));
+		node->kind = ND_FOR;
+		
+		Node *node_forCond1 = calloc(1,sizeof(Node));
+		node_forCond1->kind = ND_FORCOND1;
+		
+		Node *node_forCond2 = calloc(1,sizeof(Node));
+		node_forCond2->kind = ND_FORCOND2;
+		
+		if(nextTokenIs(";")){ // 次のTokenが";"であるなら、最初のexprは無い
+			node->lhs = new_null_node();
+		}else{
+			node->lhs = expr();
+		}
+		expect(";");
+		if(nextTokenIs(";")){
+			node_forCond1->lhs = new_null_node();
+		}
+		else{
+			node_forCond1->lhs = expr();
+		}
+		expect(";");
+		if(nextTokenIs(")")){
+			node_forCond2->lhs = new_null_node();
+		}
+		else{
+			node_forCond2->lhs = expr();
+		}
+
+		expect(")");
+		node_forCond2->rhs = stmt();
+
+		node_forCond1->rhs = node_forCond2;
+		node->rhs = node_forCond1;
 	}
 	else{
 		node = expr();

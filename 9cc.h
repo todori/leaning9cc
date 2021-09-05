@@ -25,6 +25,10 @@ typedef enum{
 	ND_IFEL,	// if-else
 	ND_ELSE,	// else
 	ND_WHILE,	// while
+	ND_FOR,		// for
+	ND_FORCOND1, // for condition
+	ND_FORCOND2, // for condition	
+	ND_NULL,	// null node for for statement
 }NodeKind;
 
 typedef struct Node Node;

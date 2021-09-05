@@ -92,6 +92,30 @@ void gen(Node *node){
 		printf(".Lend%04d:", LabelNumber++);
 		return;
 	}
+	else if(node->kind == ND_FOR){ // for(A; B; C) D
+		gen(node->lhs); // Aのコーディング
+		printf(".Lbegin%04d:\n", LabelNumber);
+		gen(node->rhs); // ND_FORCOND1ノード
+		return;
+	}
+	else if(node->kind == ND_FORCOND1){ // for(A; B; C) D
+		gen(node->lhs); // Bのコーディング
+		printf("	pop rax\n");
+		printf("	cmp rax, 0\n");
+		printf("	je .Lend%04d\n", LabelNumber);
+		gen(node->rhs); // ND_FORCOND2ノード
+		return;
+	}
+	else if(node->kind == ND_FORCOND2){ // for(A; B; C) D
+		gen(node->rhs); // Dのコーディング
+		gen(node->lhs); // Cのコーディング
+		printf("	jmp .Lbegin%04d\n", LabelNumber);
+		printf(".Lend%04d:\n", LabelNumber++);
+		return;
+	}
+	else if(node->kind == ND_NULL){
+		return;
+	}
 
 	gen(node->lhs); // 左のノードをコーディング。数字のプッシュ。変数アドレスのプッシュ、宣言の処理
 	gen(node->rhs); // 右のノードをコーディング。

@@ -87,6 +87,12 @@ Token *tokenize(char *user_input){
 			p+=5;
 			continue;
 		}
+		// forのTokenize
+		if(startSwitch(p, "for") && !is_alnum(p[3])){
+			cur = new_token(TK_CONTROL, cur, p, 3);
+			p+=3;
+			continue;
+		}
 		// 2文字記号の判断を1文字記号より先に行う
 		if( startSwitch(p, "==") || startSwitch(p, "!=") ||
 				startSwitch(p, ">=") || startSwitch(p, "<=")) {
