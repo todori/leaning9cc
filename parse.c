@@ -110,7 +110,8 @@ Node *stmt();
 // stmt = 
 // expr ";" |
 // "return" expr ";"|
-// "if" "(" expr ")" stmt ( "else" stmt)?
+// "if" "(" expr ")" stmt ( "else" stmt)?|
+// "while" "(" expr ")" stmt
 Node *expr(); // expr = assign
 Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
@@ -137,7 +138,8 @@ void program(){
 // stmt = 
 // expr ";" |
 // "return" expr ";" |
-// "if" "(" expr ")" stmt ( "else" stmt)?
+// "if" "(" expr ")" stmt ( "else" stmt)? |
+// "while" "(" expr ")"
 Node *stmt(){
 	Node *node;
 
@@ -147,22 +149,29 @@ Node *stmt(){
 		node->rhs = expr(); // 右側Nodeでexpr
 		expect(";");
 	}
-	else if(consume("if")){
+	else if(consume("if")){ // "if" "(" expr ")" stmt ( else "stmt")?
 		expect("(");
 		node = calloc(1, sizeof(Node));
-		node->kind = ND_IF;
-		node->lhs = expr();
+		node->kind = ND_IF; // if ノードに設定する
+		node->lhs = expr(); // 左側ノードはif文の条件式
 		expect(")");
-		Node *tmp_stmt = stmt();
-		if(consume("else")){
-			node->kind = ND_IFEL;
-			Node *el_node = new_node(ND_ELSE, tmp_stmt, stmt());
-			node->rhs = el_node;
+		Node *tmp_stmt = stmt(); // 右側ノードを一時的にパースする。
+		if(consume("else")){ // stmt後にelseトークンが続く場合
+			node->kind = ND_IFEL; // 作成したノードをif-elseノードへ変更する
+			Node *el_node = new_node(ND_ELSE, tmp_stmt, stmt()); // else ノードを作成し、左側にifのstma、右側にelseのstmt設定する
+			node->rhs = el_node; // if-elseノードの右側をelseノードへする
 		}
-		else{
-			node->rhs = tmp_stmt;
+		else{ // "else"トークンが無い場合
+			node->rhs = tmp_stmt; // 左側にifのstmtｗｐ設定する
 		}
-
+	}
+	else if(consume("while")){ // "while" "(" expr ")" stmt
+		expect("(");
+		node = calloc(1, sizeof(Node));
+		node->kind = ND_WHILE; // while ノード
+		node->lhs = expr(); // 左側: whileの条件式
+		expect(")");
+		node->rhs = stmt(); // 右側 : while構文内で実行するstmt
 	}
 	else{
 		node = expr();

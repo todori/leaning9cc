@@ -81,6 +81,12 @@ Token *tokenize(char *user_input){
 			p+=4;
 			continue;
 		}
+		// whileのTokenize
+		if(startSwitch(p, "while") && !is_alnum(p[5])){
+			cur = new_token(TK_CONTROL, cur, p ,5);
+			p+=5;
+			continue;
+		}
 		// 2文字記号の判断を1文字記号より先に行う
 		if( startSwitch(p, "==") || startSwitch(p, "!=") ||
 				startSwitch(p, ">=") || startSwitch(p, "<=")) {
@@ -114,7 +120,6 @@ Token *tokenize(char *user_input){
 			// curの次のToken(cur.next)へそのTokenを代入
 			// そして、戻り値としてその作成したTokenのポインタがcurに代入される
 			cur = new_token(TK_NUM, cur, p, 0); //数値は文字列数を比較しないため len = 0
-
 			// cur Tokenの数値を第1引数: p文字列から抽出し、数字でないアドレスを第2引数 :&pへ入れる
 			// 例えば"123ABC"の場合、戻り値が数値の123, &pは文字列"ABC"の先頭アドレス
 			cur->val = strtol(p , &p, 10);

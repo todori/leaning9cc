@@ -1,7 +1,7 @@
 #include "9cc.h"
 
 
-int if_LNum; // condegenで初期化
+int LabelNumber; // condegenで初期化
 
 // ローカス変数の場合
 // Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
@@ -42,7 +42,7 @@ void gen(Node *node){
 	}
 	else if(node->kind == ND_ASSIGN){ // 宣言である場合。a=3などの処理を行う。
 		gen_lvar(node->lhs); // 左側ノードは変数であるはずなので、そのメモリアドレスを計算してスタックトップへ積む
-		gen(node->rhs); // 右側ノードのパース。数字、アドレスのプッシュ / 宣言の処理
+		gen(node->rhs); // 右側ノードのコーディング。数字、アドレスのプッシュ / 宣言の処理
 
 		printf("	pop rdi\n"); // 宣言の場合、右側ノードは数値であるので、RSIは数字
 		printf("	pop rax\n"); // 宣言の場合、左側ノードは変数であるので、RAXはメモリアドレスになる
@@ -51,38 +51,50 @@ void gen(Node *node){
 		return;
 	}
 	else if(node->kind == ND_IF){ // if ノードである場合
-		gen(node->lhs); // 左側ノードのパース 論理演算の結果がRAXへpushされる
+		gen(node->lhs); // 左側ノードのコーディング 論理演算の結果がRAXへpushされる
 
 		printf("	pop rax\n"); 
 		printf("	cmp rax, 0\n"); // 結果が0(false)であることを比較
-		printf("	je	.Lend%04d\n", if_LNum);
+		printf("	je	.Lend%04d\n", LabelNumber);
 
-		gen(node->rhs); // 右側ノードのパース
-		printf(".Lend%04d:\n", if_LNum++);
+		gen(node->rhs); // 右側ノードのコーディング ifのstmt
+		printf(".Lend%04d:\n", LabelNumber++);
 		return;
 
 	}
-	else if(node->kind == ND_IFEL){
-		gen(node->lhs);
+	else if(node->kind == ND_IFEL){ // if-else ノード
+		gen(node->lhs); // 左側ノードをコーディング。ifの条件式の結果がRAXへpushされる
 
 		printf("	pop rax\n");
 		printf("	cmp rax, 0\n");
-		printf("	je	.Lelse%04d\n", if_LNum);
-		gen(node->rhs);
+		printf("	je	.Lelse%04d\n",  LabelNumber );
+		gen(node->rhs); // 右側ノードをコーディング。右側はelseノードになっているので、次の再帰呼出しで処理
 		return;
 	}
-	else if(node->kind == ND_ELSE){
-		gen(node->lhs);
+	else if(node->kind == ND_ELSE){ // else ノード
+		gen(node->lhs); // if の stmtのコード
 
-		printf("	jmp .Lend%04d\n", if_LNum);
-		printf(".Lelse%04d:\n",if_LNum);
+		printf("	jmp .Lend%04d\n",  LabelNumber );
+		printf(".Lelse%04d:\n",LabelNumber);
+		gen(node->rhs); // else の stmtのコード
+		printf(".Lend%04d:\n", LabelNumber++);
+		return;
+	}
+	else if(node->kind == ND_WHILE){
+		printf(".Lbegin%04d:\n", LabelNumber);
+		gen(node->lhs); // 条件式のコーディング
+		
+		printf("	pop rax\n");
+		printf("	cmp rax, 0\n");
+		printf("	je .Lend%04d\n", LabelNumber);
 		gen(node->rhs);
-		printf(".Lend%04d:\n", if_LNum++);
+		printf("	jmp .Lbegin%04d\n", LabelNumber);
+		printf(".Lend%04d:", LabelNumber++);
 		return;
 	}
 
-	gen(node->lhs); // 左のノードをパース。数字のプッシュ。変数アドレスのプッシュ、宣言の処理
-	gen(node->rhs); // 右のノードをパース。
+	gen(node->lhs); // 左のノードをコーディング。数字のプッシュ。変数アドレスのプッシュ、宣言の処理
+	gen(node->rhs); // 右のノードをコーディング。
 
 	printf("	pop rdi\n"); //後にスタックした値を先に取り出す。右側のノードの値
 	printf("	pop rax\n"); //先のスタックした値を後に取り出す。左側のノードの値
@@ -128,8 +140,8 @@ void gen(Node *node){
 
 void codegen(){
 	
-	//if_LNumの初期化
-	if_LNum = 1;
+	//LabelNumberの初期化
+	LabelNumber = 1;
 
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
