@@ -1,7 +1,12 @@
 #include "9cc.h"
 
 
-int LabelNumber; // condegenで初期化
+int IfEndLNum; // condegenで初期化
+int IfElseLNum; // condegenで初期化
+int WhileBeginLNum; // condegenで初期化
+int WhileEndLNum; // condegenで初期化
+int ForBeginLNum;
+int ForEndLNum;
 
 // ローカス変数の場合
 // Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
@@ -55,10 +60,10 @@ void gen(Node *node){
 
 		printf("	pop rax\n"); 
 		printf("	cmp rax, 0\n"); // 結果が0(false)であることを比較
-		printf("	je	.Lend%04d\n", LabelNumber);
+		printf("	je	.LIfEnd%04d\n", IfEndLNum);
 
 		gen(node->rhs); // 右側ノードのコーディング ifのstmt
-		printf(".Lend%04d:\n", LabelNumber++);
+		printf(".LIfEnd%04d:\n", IfEndLNum++);
 		return;
 
 	}
@@ -67,34 +72,34 @@ void gen(Node *node){
 
 		printf("	pop rax\n");
 		printf("	cmp rax, 0\n");
-		printf("	je	.Lelse%04d\n",  LabelNumber );
+		printf("	je	.LElse%04d\n",  IfElseLNum);
 		gen(node->rhs); // 右側ノードをコーディング。右側はelseノードになっているので、次の再帰呼出しで処理
 		return;
 	}
 	else if(node->kind == ND_ELSE){ // else ノード
 		gen(node->lhs); // if の stmtのコード
 
-		printf("	jmp .Lend%04d\n",  LabelNumber );
-		printf(".Lelse%04d:\n",LabelNumber);
+		printf("	jmp .LIfEnd%04d\n",  IfEndLNum );
+		printf(".LElse%04d:\n",IfElseLNum++);
 		gen(node->rhs); // else の stmtのコード
-		printf(".Lend%04d:\n", LabelNumber++);
+		printf(".LIfEnd%04d:\n", IfEndLNum++);
 		return;
 	}
 	else if(node->kind == ND_WHILE){
-		printf(".Lbegin%04d:\n", LabelNumber);
+		printf(".LWhileBegin%04d:\n", WhileBeginLNum);
 		gen(node->lhs); // 条件式のコーディング
 		
 		printf("	pop rax\n");
 		printf("	cmp rax, 0\n");
-		printf("	je .Lend%04d\n", LabelNumber);
+		printf("	je .LWhileEnd%04d\n", WhileEndLNum);
 		gen(node->rhs);
-		printf("	jmp .Lbegin%04d\n", LabelNumber);
-		printf(".Lend%04d:", LabelNumber++);
+		printf("	jmp .LWhileBegin%04d\n", WhileBeginLNum);
+		printf(".LWhileEnd%04d:", WhileEndLNum++);
 		return;
 	}
 	else if(node->kind == ND_FOR){ // for(A; B; C) D
 		gen(node->lhs); // Aのコーディング
-		printf(".Lbegin%04d:\n", LabelNumber);
+		printf(".LForBegin%04d:\n", ForBeginLNum);
 		gen(node->rhs); // ND_FORCOND1ノード
 		return;
 	}
@@ -102,15 +107,15 @@ void gen(Node *node){
 		gen(node->lhs); // Bのコーディング
 		printf("	pop rax\n");
 		printf("	cmp rax, 0\n");
-		printf("	je .Lend%04d\n", LabelNumber);
+		printf("	je .LForEnd%04d\n", ForEndLNum);
 		gen(node->rhs); // ND_FORCOND2ノード
 		return;
 	}
 	else if(node->kind == ND_FORCOND2){ // for(A; B; C) D
 		gen(node->rhs); // Dのコーディング
 		gen(node->lhs); // Cのコーディング
-		printf("	jmp .Lbegin%04d\n", LabelNumber);
-		printf(".Lend%04d:\n", LabelNumber++);
+		printf("	jmp .LForBegin%04d\n", ForBeginLNum);
+		printf(".LForEnd%04d:\n", ForEndLNum++);
 		return;
 	}
 	else if(node->kind == ND_NULL){
@@ -165,7 +170,12 @@ void gen(Node *node){
 void codegen(){
 	
 	//LabelNumberの初期化
-	LabelNumber = 1;
+	IfEndLNum = 1; 
+	IfElseLNum = 1;
+	WhileBeginLNum = 1;
+	WhileEndLNum = 1;
+	ForBeginLNum = 1;
+	ForEndLNum = 1;
 
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");

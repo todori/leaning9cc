@@ -63,7 +63,7 @@ void expect(char *op){
 	if(token->kind != TK_RESERVED ||
 		 strlen(op) != token->len ||
 		 !equal(token, op))
-		error("'%c'ではありません", op);
+		error("'%s'ではありません\nstr : %s\n", op, token->str);
 	token=token->next;
 }
 
@@ -72,7 +72,7 @@ void expect(char *op){
 //それ以外の場合にはエラーを報告する
 int expect_number(){
 	if(token->kind != TK_NUM)
-		error("数ではありません");
+		error("数ではありません\n str : %s\n", token->str);
 	int val = token->val;
 	token = token->next;
 	return val;
