@@ -118,6 +118,14 @@ void gen(Node *node){
 		printf(".LForEnd%04d:\n", ForEndLNum++);
 		return;
 	}
+	else if(node->kind == ND_BLOCK){ // "{" stmt* "}"
+		// stmt* はNodeリンクとして設定している
+		// 次のリンクがNULLになるまで stmt のコーディングを行う
+		for(Node *cur = node->stmtLink; cur; cur = cur->stmtLink){
+			gen(cur); // stmtのコーディング
+		}
+		return;
+	}
 	else if(node->kind == ND_NULL){
 		return;
 	}

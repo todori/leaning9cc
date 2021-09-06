@@ -42,6 +42,13 @@ bool nextTokenIs(char *op){
 
 }
 
+bool currentTokenIs(char *op){
+	if(equal(token, op)){
+		return true;
+	}
+	return false;
+}
+
 // Tokenが変数であることを仮定して、
 // 現在のTokenを返し、Tokenを1つ前に進める
 Token *consume_ident(){
@@ -123,6 +130,7 @@ bool at_eof(){
 void program(); // program = stmt*
 Node *stmt(); 
 // stmt = expr ";"
+// | "{" stmt* "}"
 // | "return" expr ";"
 // | "if" "(" expr ")" stmt ( "else" stmt)?
 // | "while" "(" expr ")" stmt 
@@ -151,6 +159,7 @@ void program(){
 }
 
 // stmt = expr ";"
+// | "{" stmt* "}"
 // | "return" expr ";"
 // | "if" "(" expr ")" stmt ( "else" stmt)?
 // | "while" "(" expr ")" stmt 
@@ -158,7 +167,25 @@ void program(){
 Node *stmt(){
 	Node *node;
 
-	if(consume("return")){
+	if(consume("{")){ // "{" stmt* "}"
+		
+		Node *stmtLinkHead = stmt(); // 最初のstmt
+		Node *cur = calloc(1, sizeof(Node)); // stmtArrayを進めるためのポインタ
+		cur = stmtLinkHead; // cur(現在)をstmtArrayに設定
+		while(!currentTokenIs("}"))
+		{
+			Node *next = stmt(); // 次のstmt 
+			cur->stmtLink = next; // cur(現在)のstmtLinkにnextを設定
+			cur = next; // cur(現在)をnextに設定
+		}
+		expect("}");
+		cur->stmtLink = NULL; // stmtlinkの最後をNULLに設定
+		
+		node =calloc(1, sizeof(Node)); // nodeの領域確保
+		node->kind = ND_BLOCK; // ND_BLOCKノードに設定
+		node->stmtLink = stmtLinkHead; // nodeのstmtLinkにstmtLinkHeadを設定
+	}
+	else if(consume("return")){
 		node = calloc(1, sizeof(Node));
 		node->kind = ND_RETURN;
 		node->rhs = expr(); // 右側Nodeでexpr

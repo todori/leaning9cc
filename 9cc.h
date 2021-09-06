@@ -29,6 +29,7 @@ typedef enum{
 	ND_FORCOND1, // for condition
 	ND_FORCOND2, // for condition	
 	ND_NULL,	// null node for for statement
+	ND_BLOCK, // {}
 }NodeKind;
 
 typedef struct Node Node;
@@ -40,6 +41,7 @@ struct Node{
 	Node *rhs;	// 右辺(Right Hand Side)
 	int val;		// kindがND_NUMの場合のみ使う
 	int offset;	// kindがND_LVARの場合のみ使う
+	Node *stmtLink; // ND_BLOCKの場合、stmtのノードを保持するポインタ
 };
 
 

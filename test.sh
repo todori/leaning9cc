@@ -17,6 +17,8 @@ assert(){
 	fi
 }
 
+assert 12 '{a=5; b=7; c=a+b; return c;}'
+assert 4 'a=1; b=2; if(a>b){c=3; b=2;} else{for(a=1; a < 3; a=a+1){ return 4;}}'
 assert 5 'a=1; for(b=1; b<3; b=b+1) a=a+2; return a;'
 assert 6 'a=1; while(a <= 5) a = a+1; return a;'
 assert 5 'if(3<1) return 1; else return 5;'
