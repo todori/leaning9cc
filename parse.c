@@ -97,6 +97,16 @@ LVar *find_lvar(Token *tok){
 	return NULL;
 }
 
+// 関数名を検索する
+FName *find_fname(Token *tok){
+	for(FName *name = functionNames; name; name = name->next){
+		if(name->len == tok->len && !memcmp(tok->str, name->name, name->len))
+			return name;
+	}
+	return NULL;
+}
+
+
 //新しいノードを作成し、そのノードを返す
 //引数は新しいノードの種類、左辺、右辺
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs){
@@ -135,6 +145,7 @@ Node *stmt();
 // | "if" "(" expr ")" stmt ( "else" stmt)?
 // | "while" "(" expr ")" stmt 
 // | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+// | ""
 Node *expr(); // expr = assign
 Node *assign(); // assign = equality ("=" assign)?
 Node *equality(); // equality = relational( "==" relational | "!=" relational) *
@@ -142,7 +153,10 @@ Node *relational(); // relational = add ("<" add | "<=" add | ">" add | ">=" add
 Node *add(); // add = mul ("+" mul | "-" mul)*
 Node *mul(); // mul = unary ("*" unary | "/" unary)*
 Node *unary(); // unary = ("+" | "-")? primary
-Node *primary(); // primary = num | ident | "(" expr ")"
+Node *primary(); 
+// primary = num 
+// | ident ( "(" (expr ","?)*  ")" )? // identの後に"("がある場合、それは関数名
+// | "(" expr ")"
 
 
 
@@ -231,7 +245,7 @@ Node *stmt(){
 		}else{
 			node->lhs = expr();
 		}
-		expect(";");
+		expect(";"); // 次のTokenへ進む
 		if(nextTokenIs(";")){
 			node_forCond1->lhs = new_null_node();
 		}
@@ -358,7 +372,10 @@ Node *unary(){
 	return primary();
 }
 
-// 生成規則 primary = num | ident | "(" expr ")"
+// 生成規則 
+// primary = num 
+// | ident ( "(" (expr ","?)* ")" )? // identの後に"("がある場合、それは関数名
+// | "(" expr ")"
 // 関数内のconsume,expectとexpect_numberでTokenを1つ進める
 Node *primary(){
 	// 次のトークンが"("なら"(" expr ")"のはず
@@ -370,24 +387,73 @@ Node *primary(){
 
 	if(is_ident()) // 変数の場合
 	{
-		Token *tok = consume_ident(); // 現在のTokenを戻し、consume_ident内でTokenを1つ進める
-		Node *node = calloc(1,sizeof(Node));
-		node->kind = ND_LVAR; // 変数ノードを作成する
-		
-		LVar *lvar = find_lvar(tok);
-		if(lvar){ // 変数が見つかった場合
-			node->offset = lvar->offset;
-		}
-		else{ // 変数が見つからなかった場合
-			lvar = calloc(1, sizeof(LVar)); // 新しいローカル変数型を作成
-			lvar->next = locals; // 新しいローカル変数の次へこれまで作成しているローカル変数連結を設定
-			lvar->name = tok->str; // 新しいローカル変数の名前を現在のTokenから設定
-			lvar->len = tok->len; // 新しいローカル変数の長さを現在のTokenから設定
-			lvar->offset = locals->offset + 8; // 新しいローカル変数のoffsetをこれまでの変数offset+8に設定
-			locals = lvar; // localsに作成したlvarを設定
-			//上記の処理でlocalsの連結を先の伸ばしていく、スタックへ積むような処理になる
+		Node *node = calloc(1, sizeof(Node));
+		Token *ident_tok = consume_ident(); // 現在のTokenを戻し、consume_ident内でTokenを1つ進める
+		if(consume("(")){ // identの次のTokenが"("の場合、そのidentは関数名
+			node->kind = ND_FUNCTION_CALL; // 関数呼び出しノード
+			node->f_name = ident_tok->str; // 関数名
+			node->f_name_len = ident_tok->len; // 関数名長さ
+
+			FName *fname = find_fname(ident_tok); // 関数名をリストから探索する
+			if(fname){ // 関数名がある場合
+				// do nothing
+			}
+			else{ // 関数名がリストに無い場合,リストへ追加する
+				fname = calloc(1, sizeof(FName));
+				fname->next = functionNames;
+				fname->name = ident_tok->str;
+				fname->len = ident_tok->len;
+
+				functionNames = fname;
+			}
 			
-			node->offset = lvar->offset; // ノードのoffsetを設定
+
+			if(consume(")")){ // 次のtokenが")"の場合、引数は無い
+				node->parameterLink = NULL;
+				node->parameterNumber = 0;
+			}
+			else{
+				Node *paramHead = expr(); // 第一引数
+				Node *cur = calloc(1,sizeof(Node));
+				cur = paramHead;
+				int number = 1;
+				while(!currentTokenIs(")")){ // ")"になるまで
+					expect(",");
+					Node *next = expr();
+					cur->parameterLink = next;
+					cur = next;
+					number = number + 1;
+					if(number > 6){
+						error("引数の数は6以下にしてください\n");
+					}
+				}
+				expect(")");
+				cur->parameterLink = NULL; // Link 終端
+
+				node->parameterLink = paramHead;
+				node->parameterNumber = number;
+			}
+
+		}
+		else{ // そうでない場合、そのidentは変数名
+		
+			node->kind = ND_LVAR; // 変数ノードを作成する
+		
+			LVar *lvar = find_lvar(ident_tok);
+			if(lvar){ // 変数が見つかった場合
+				node->offset = lvar->offset;
+			}
+			else{ // 変数が見つからなかった場合
+				lvar = calloc(1, sizeof(LVar)); // 新しいローカル変数型を作成
+				lvar->next = locals; // 新しいローカル変数の次へこれまで作成しているローカル変数連結を設定
+				lvar->name = ident_tok->str; // 新しいローカル変数の名前を現在のTokenから設定
+				lvar->len = ident_tok->len; // 新しいローカル変数の長さを現在のTokenから設定
+				lvar->offset = locals->offset + 8; // 新しいローカル変数のoffsetをこれまでの変数offset+8に設定
+				locals = lvar; // localsに作成したlvarを設定
+				//上記の処理でlocalsの連結を先の伸ばしていく、スタックへ積むような処理になる
+			
+				node->offset = lvar->offset; // ノードのoffsetを設定
+			}
 		}
 
 		return node;
@@ -404,6 +470,10 @@ Node *primary(){
 void parse(){
 	// ローカル変数連結の最初を0で初期化する
 	locals = calloc(1, sizeof(LVar));
+
+	// 関数名連結の最初を0で初期化する
+	functionNames = calloc(1, sizeof(FName));
+
 	program();
 }
 

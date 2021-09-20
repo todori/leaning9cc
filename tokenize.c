@@ -104,17 +104,15 @@ Token *tokenize(char *user_input){
 		}
 
 		// 1文字記号の判断
-		if(strchr("+-*/()<>=;{}", *p)){
+		if(strchr("+-*/()<>=;{},", *p)){
 			// char *strchr(const char *s, int c);
 			// sが示す文字列の中に最初に(charに変換された)cが出現する位置を特定する
 			// 文字列中にcがなければNULLを返す。
-			// よって、このifでは、"+-*/()<>=;{}"のいずれかがあれば0で無い値がstrchrから返されるのでTrueになり、なければNULL : 0 が戻るので、Falseになる
+			// よって、このifでは、"+-*/()<>=;{},"のいずれかがあれば0で無い値がstrchrから返されるのでTrueになり、なければNULL : 0 が戻るので、Falseになる
 			//
 			// 新しくTK_RESERVED型で文字列pのTokenを作成し、
 			// curの次のToken(cur.next)へそのTokenを代入
 			// そして、戻り値としてその作成したTokenのポインタがcurに代入される
-//			char *str;
-//			memcpy(str, p, 1);
 			cur = new_token(TK_RESERVED, cur, p, 1);
 			p++;	
 			// 次の文字へ

@@ -7,6 +7,7 @@ int WhileBeginLNum; // condegenで初期化
 int WhileEndLNum; // condegenで初期化
 int ForBeginLNum;
 int ForEndLNum;
+int StackAlign;
 
 // ローカス変数の場合
 // Nodeが変数の場合、そのアドレスを計算して、それをスタックへプッシュ
@@ -126,6 +127,34 @@ void gen(Node *node){
 		}
 		return;
 	}
+	else if(node->kind == ND_FUNCTION_CALL){
+		for(Node *cur = node->parameterLink; cur; cur = cur->parameterLink){
+			gen(cur); // 第一引数の結果から順番にpushしていく
+		}
+
+		char *registers[6] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+		for(int i = node->parameterNumber - 1; i >= 0; i--){
+			printf("	pop %s\n", registers[i]);
+		}
+
+		char dst[100];
+		memset(dst, '\0', sizeof(dst));
+		strncpy(dst, node->f_name, node->f_name_len);
+		// RSPの値が16バイト境界かを調べる
+		printf("	mov rax, rsp\n"); // RSPの値をRAXへ
+		printf("	and rax, 0b1111\n"); // 15(0b1111)と&を取る
+		printf("	jnz .LStackAlign%d\n", StackAlign); // jnz 結果が0出ない場合
+		printf("	call %s\n", dst);
+		printf("	jmp .LStackAlignEnd%d\n", StackAlign);
+		printf(".LStackAlign%d:\n", StackAlign);
+		printf("	sub rsp, 8\n"); // RSPから8バイトを引いて16バイト境界へする(POP, PUSHは8バイト単位でRSPを操作するので,RSPが16バイト境界に無い場合は8バイト境界になっている)
+		printf("	call %s\n", dst);
+		printf("	add rsp, 8\n"); // 差し引いた8バイトを元に戻す
+		printf(".LStackAlignEnd%d:\n", StackAlign++);
+		printf("	push rax\n"); // 関数戻り値をスタックへ積む
+		return;
+	
+	}
 	else if(node->kind == ND_NULL){
 		return;
 	}
@@ -184,14 +213,24 @@ void codegen(){
 	WhileEndLNum = 1;
 	ForBeginLNum = 1;
 	ForEndLNum = 1;
+	StackAlign = 1;
 
 	// アセンブリの前半部分を出力
 	printf(".intel_syntax noprefix\n");
-	printf(".global main\n");
+	printf(".global main");
+	for(FName *fname = functionNames; fname; fname = fname->next){
+		if(fname->name != NULL){
+		//	fprintf(stderr, "%s, %d\n", fname->name, fname->len);
+			char d[20];
+			memset(d, '\0', sizeof(d));
+			strncpy(d, fname->name, fname->len);
+			printf(", %s", d);
+		}
+	}
+	printf("\n");
 	printf("main:\n");
 
 	// プロローグ
-	// 変数 26個分 ('a'- 'z')の領域を確保する
 	printf("	push rbp\n"); // RBPレジスタ（ベースレジスタ)の値(ベースポインタ値)を
 	// RSPレジスタが指すスタックの先頭へプッシュする（メモリアクセス)
 	printf("	mov rbp, rsp\n"); // RSPレジスタ値をRBPレジスタへ代入(メモリアドレス RBP = RSP)

@@ -30,6 +30,7 @@ typedef enum{
 	ND_FORCOND2, // for condition	
 	ND_NULL,	// null node for for statement
 	ND_BLOCK, // {}
+	ND_FUNCTION_CALL, // function call
 }NodeKind;
 
 typedef struct Node Node;
@@ -42,6 +43,10 @@ struct Node{
 	int val;		// kindがND_NUMの場合のみ使う
 	int offset;	// kindがND_LVARの場合のみ使う
 	Node *stmtLink; // ND_BLOCKの場合、stmtのノードを保持するポインタ
+	char *f_name; // ND_FUNCTION_CALLの場合に使用。関数名
+	int f_name_len; //
+	Node *parameterLink; // ND_FUNCTION_CALLの場合、関数の引数ノードを保持するポインタ	
+	int parameterNumber;
 };
 
 
@@ -80,6 +85,20 @@ struct LVar{
 
 // ローカル変数
 LVar *locals;
+
+typedef struct FName FName;
+
+// 関数名の型
+struct FName{
+	char *name; // 関数名
+	int len;		// 関数名長さ
+	FName *next;
+};
+
+// 関数名の型のリンク
+// アセンブラヘッダでの宣言に使用する
+// parseでリンクを生成する
+FName *functionNames;
 
 extern void error(char *fmt, ...);
 
